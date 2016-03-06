@@ -22,9 +22,14 @@ public class PrayerTimes{
     var offsets = [Double](count: 7, repeatedValue: 0.0)
     var lat: Double = Double() // latitude
     var lng: Double = Double() // longitude
-    var timeZone: Double = Double() // time-zone
+    var timeZone: NSTimeZone = NSTimeZone.localTimeZone() // time-zone
     var JDate: Double = Double() //0.0 // Julian date
     
+    internal var timeZoneOffset: Double {
+        get {
+            return Double(self.timeZone.secondsFromGMT) / 3600.0
+        }
+    }
     
     internal enum PrayerName : String {
         case Fajr = "Fajr"
@@ -214,7 +219,7 @@ public class PrayerTimes{
     
     // -------------------- Interface Functions --------------------
     // return prayer times for a given date
-    func getDatePrayerTimes(year: Int, month: Int, day: Int, latitude: Double, longitude: Double, tZone: Double) -> Set<String> {
+    func getDatePrayerTimes(year: Int, month: Int, day: Int, latitude: Double, longitude: Double, tZone: NSTimeZone) -> Set<String> {
         lat = latitude
         lng = longitude
         timeZone = tZone
@@ -225,13 +230,16 @@ public class PrayerTimes{
     }
     
     // return prayer times for a given date
-    public func getPrayerTimes(date: NSCalendar, latitude: Double, longitude: Double, tZone: Double) -> Set<String> {
+    public func getPrayerTimes(date: NSCalendar, latitude: Double, longitude: Double, tZone: NSTimeZone?) -> Set<String> {
         
         let year = (date.component(NSCalendarUnit.Year, fromDate: NSDate()))
         let month = (date.component(NSCalendarUnit.Month, fromDate: NSDate()))
         let day = (date.component(NSCalendarUnit.Day, fromDate: NSDate()))
+        if let timeZone = tZone {
+            self.timeZone = timeZone
+        }
         
-        return getDatePrayerTimes(year, month: month, day: day, latitude: latitude, longitude: longitude, tZone: tZone)
+        return getDatePrayerTimes(year, month: month, day: day, latitude: latitude, longitude: longitude, tZone: self.timeZone)
     }
     
     // set custom values for calculation parameters
@@ -387,7 +395,7 @@ public class PrayerTimes{
         
         var aTime : [Double] = []
         for i in 0..<times.count {
-            let element = times[i] + timeZone - lng / 15
+            let element = times[i] + self.timeZoneOffset - lng / 15
             aTime.append(element)
         }
         
