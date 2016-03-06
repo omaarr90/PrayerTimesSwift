@@ -31,6 +31,13 @@ public class PrayerTimes{
         }
     }
     
+    public var prayerTimes: String {
+        get {
+//            return self.getPrayerTimes(<#T##date: NSCalendar##NSCalendar#>, latitude: <#T##Double#>, longitude: <#T##Double#>, tZone: <#T##NSTimeZone?#>)
+            return ""
+        }
+    }
+    
     internal enum PrayerName : String {
         case Fajr = "Fajr"
         case Sunrise = "Sunrise"
@@ -232,15 +239,21 @@ public class PrayerTimes{
     // return prayer times for a given date
     public func getPrayerTimes(date: NSCalendar, latitude: Double, longitude: Double, tZone: NSTimeZone?) -> Set<String> {
         
-        let year = (date.component(NSCalendarUnit.Year, fromDate: NSDate()))
-        let month = (date.component(NSCalendarUnit.Month, fromDate: NSDate()))
-        let day = (date.component(NSCalendarUnit.Day, fromDate: NSDate()))
+        return self.getPrayerTimesForCalendar(date, inDate: NSDate(), latitude: latitude, longitude: longitude, tZone: tZone)
+    }
+    
+    public func getPrayerTimesForCalendar(calendar: NSCalendar, inDate date: NSDate, latitude: Double, longitude: Double, tZone: NSTimeZone?) -> Set<String> {
+        
+        let year = (calendar.component(NSCalendarUnit.Year, fromDate: date))
+        let month = (calendar.component(NSCalendarUnit.Month, fromDate: date))
+        let day = (calendar.component(NSCalendarUnit.Day, fromDate: date))
         if let timeZone = tZone {
             self.timeZone = timeZone
         }
         
         return getDatePrayerTimes(year, month: month, day: day, latitude: latitude, longitude: longitude, tZone: self.timeZone)
     }
+
     
     // set custom values for calculation parameters
     public func setCustomParams(var params: [Double]) {
