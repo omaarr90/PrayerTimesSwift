@@ -14,10 +14,15 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
-        let myPrayerTime = PrayerTimes(caculationmethod: .Makkah, asrJuristic: .Shafii, adjustHighLats: .None, timeFormat: .Time12)
-        let prayerTimes = myPrayerTime.getPrayerTimes(NSCalendar.currentCalendar(), latitude: 24.7993689, longitude: 46.6176563, tZone: NSTimeZone.localTimeZone())
+        let myPrayerTime = PrayerTimes(caculationmethod: .Makkah, asrJuristic: .Shafii, adjustHighLats: .None, timeFormat: .Time12, location: (24.7993689, longitude: 46.6176563))
         myPrayerTime.caculationMethod = .Makkah
-        for time in prayerTimes{
+        for time in myPrayerTime.prayerTimes{
+            print(time)
+        }
+        
+        myPrayerTime.location = (34.7993689, longitude: 46.6176563)
+        print(" ----- ")
+        for time in myPrayerTime.prayerTimes{
             print(time)
         }
     }

@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import CoreLocation
 
 public class PrayerTimes{
     
@@ -20,10 +21,14 @@ public class PrayerTimes{
     public var timeFormat : TimeForamts = .Time24 // time format
     var prayerTimesCurrent: [Double] = []
     var offsets = [Double](count: 7, repeatedValue: 0.0)
-    var lat: Double = Double() // latitude
-    var lng: Double = Double() // longitude
+//    var latitude: Double// = Double() // latitude
+//    var longitude: Double// = Double() // longitude
+    public var location:(latitude: Double, longitude: Double)
     var timeZone: NSTimeZone = NSTimeZone.localTimeZone() // time-zone
     var JDate: Double = Double() //0.0 // Julian date
+    
+    public var calendar: NSCalendar = NSCalendar.currentCalendar()
+    public var date: NSDate = NSDate()
     
     internal var timeZoneOffset: Double {
         get {
@@ -31,10 +36,9 @@ public class PrayerTimes{
         }
     }
     
-    public var prayerTimes: String {
+    public var prayerTimes: Set<String> {
         get {
-//            return self.getPrayerTimes(<#T##date: NSCalendar##NSCalendar#>, latitude: <#T##Double#>, longitude: <#T##Double#>, tZone: <#T##NSTimeZone?#>)
-            return ""
+            return self.getPrayerTimesForCalendar()
         }
     }
     
@@ -108,15 +112,17 @@ public class PrayerTimes{
     
     // ------------------------------------------------------------
     // Init
-    public init(caculationmethod: CalculationMethods, asrJuristic: AsrJuristicMethods, adjustHighLats:AdjustingMethods , timeFormat:TimeForamts){
+    public init(caculationmethod: CalculationMethods, asrJuristic: AsrJuristicMethods, adjustHighLats:AdjustingMethods , timeFormat:TimeForamts, location: (Double, Double)){
         self.caculationMethod = caculationmethod
         self.asrJuristic = asrJuristic
         self.adjustHighLats = adjustHighLats
         self.timeFormat = timeFormat
+        self.location = location
         
     }
-    public init(caculationmethod: CalculationMethods, asrJuristic: AsrJuristicMethods, adjustHighLats:AdjustingMethods , timeFormat:TimeForamts, offsets:[Double]){
+    public init(caculationmethod: CalculationMethods, asrJuristic: AsrJuristicMethods, adjustHighLats:AdjustingMethods , timeFormat:TimeForamts, offsets:[Double], location: (Double, Double)){
         self.offsets = offsets
+        self.location = location
     }
     
     
@@ -203,8 +209,8 @@ public class PrayerTimes{
     func computeTime(G: Double, t: Double) -> Double {
         let D = sunDeclination(JDate + t)
         let Z = computeMidDay(t)
-        let Beg = -Double.dSin(G) - Double.dSin(D) * Double.dSin(lat)
-        let Mid = Double.dCos(D) * Double.dCos(lat)
+        let Beg = -Double.dSin(G) - Double.dSin(D) * Double.dSin(self.location.latitude)
+        let Mid = Double.dCos(D) * Double.dCos(self.location.latitude)
         let V = Double.dArcCos(Beg/Mid)/15.0
         return Z + (G > 90 ? -V : V)
     }
@@ -213,7 +219,7 @@ public class PrayerTimes{
     // Shafii: step=1, Hanafi: step=2
     func computeAsr(step: Double, t: Double) -> Double {
         let D = sunDeclination(JDate + t)
-        let G = -Double.dArcCot(step + Double.dTan(abs(lat - D)))
+        let G = -Double.dArcCot(step + Double.dTan(abs(self.location.latitude - D)))
         return computeTime(G, t: t)
     }
     
@@ -227,31 +233,20 @@ public class PrayerTimes{
     // -------------------- Interface Functions --------------------
     // return prayer times for a given date
     func getDatePrayerTimes(year: Int, month: Int, day: Int, latitude: Double, longitude: Double, tZone: NSTimeZone) -> Set<String> {
-        lat = latitude
-        lng = longitude
-        timeZone = tZone
         JDate = julianDate(year, month: month, day: day)
         let lonDiff = longitude / (15.0 * 24.0)
         JDate = JDate - lonDiff
         return computeDayTimes()
     }
     
-    // return prayer times for a given date
-    public func getPrayerTimes(date: NSCalendar, latitude: Double, longitude: Double, tZone: NSTimeZone?) -> Set<String> {
-        
-        return self.getPrayerTimesForCalendar(date, inDate: NSDate(), latitude: latitude, longitude: longitude, tZone: tZone)
-    }
     
-    public func getPrayerTimesForCalendar(calendar: NSCalendar, inDate date: NSDate, latitude: Double, longitude: Double, tZone: NSTimeZone?) -> Set<String> {
+    internal func getPrayerTimesForCalendar() -> Set<String> {
         
-        let year = (calendar.component(NSCalendarUnit.Year, fromDate: date))
-        let month = (calendar.component(NSCalendarUnit.Month, fromDate: date))
-        let day = (calendar.component(NSCalendarUnit.Day, fromDate: date))
-        if let timeZone = tZone {
-            self.timeZone = timeZone
-        }
+        let year = calendar.component(NSCalendarUnit.Year, fromDate: date)
+        let month = calendar.component(NSCalendarUnit.Month, fromDate: date)
+        let day = calendar.component(NSCalendarUnit.Day, fromDate: date)
         
-        return getDatePrayerTimes(year, month: month, day: day, latitude: latitude, longitude: longitude, tZone: self.timeZone)
+        return getDatePrayerTimes(year, month: month, day: day, latitude: self.location.latitude, longitude: self.location.longitude, tZone: self.timeZone)
     }
 
     
@@ -331,9 +326,9 @@ public class PrayerTimes{
         let minutes = Int(floor( (Double(adujestedTime) - Double(hours)) * 60))
         var suffix: String, result: String
         if (hours >= 12) {
-            suffix = "pm"
+            suffix = NSLocalizedString("pm", comment: "Suffix for night time")
         } else {
-            suffix = "am"
+            suffix = NSLocalizedString("am", comment: "Suffix for day time")
         }
         hours = (((hours+12)-1)%12)+1
         /*hours = (hours + 12) - 1
@@ -408,7 +403,7 @@ public class PrayerTimes{
         
         var aTime : [Double] = []
         for i in 0..<times.count {
-            let element = times[i] + self.timeZoneOffset - lng / 15
+            let element = times[i] + self.timeZoneOffset - self.location.longitude / 15
             aTime.append(element)
         }
         
